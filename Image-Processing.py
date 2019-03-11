@@ -58,8 +58,8 @@ def histogram():
 	plt.show()
 
 def filtroGaussiano():
-	matriz = getGaussianFilter(4)[0]
-	escalar = getGaussianFilter(4)[1]
+	matriz = getGaussianFilter()[0]
+	escalar = getGaussianFilter()[1]
 
 	copia = ds.pixel_array.copy() 
 	copia = convolucion(copia,matriz,escalar)
@@ -68,24 +68,21 @@ def filtroGaussiano():
 	plt.show()
 
 def filtroRayleigh():
-	matriz = getRayleighFilter(3)[0]
-	escalar = getRayleighFilter(3)[1]
+	matriz = getRayleighFilter(2)[0]
+	escalar = getRayleighFilter(2)[1]
 
 	copia = ds.pixel_array.copy() 
 	copia = convolucion(copia,matriz,escalar)
 
 	plt.imshow(copia)
 	plt.show()
-
+	
 def filtroGaussianoEntero():
 	matriz = getIntegerValuedGaussianFilter()[0]
 	escalar = getIntegerValuedGaussianFilter()[1]
 
 	copia = ds.pixel_array.copy() 
 	copia = convolucion(copia,matriz,escalar)
-
-	print(ds[100][100])
-	print(copia[100][100])
 
 	plt.imshow(copia)
 	plt.show()
@@ -96,7 +93,11 @@ def hallarBordes():
 	gradienteX = convolucion(copia,matrizSobelX,1)
 	gradienteY = convolucion(copia,matrizSobelY,1)
 
-	copia = seleccionarBordes(copia,gradienteX,gradienteY)
+	gradiente = calcularGradiente(gradienteX,gradienteY)
+
+	umbral = 4000#Esto deberia funcionar con otsu
+
+	copia = seleccionarBordes(copia,gradiente,umbral)
 
 	plt.imshow(copia)
 	plt.show()
@@ -184,39 +185,48 @@ def getKthPascalRow(rowNumber):
 def convolucion(imagen,matriz,escalar):
 	imagenM = imagen
 	s = len(matriz)#Tamaño del Kernel
-	n = (s-1)/2#numero de vecinos
+	n = int((s-1)/2)#numero de vecinos
 
-	for i in range(0,rows):
-		for j in range(0,columns):
-			if i<n or i>(rows-n) or j<n or j>(columns-n):
+	for i in range(rows):
+		for j in range(columns):
+			if(i<n or i>((rows-1)-n) or j<n or j>((columns-1)-n)):
 				imagenM[i][j]=0
 			else:
-				p = 0
-				q = 0
-				aux = 0
-				for x in range(int(i-n),int(i+n)):
-					for y in range(int(j-n),int(j+n)):
-						aux+=imagen[x][y]*matriz[p][q]
-						q+=1#end for y
-					p+=1
-					q=0#end for x
+				px=0
+				py=0
+				aux=0.0
+				for kx in range(i-n,i+n+1):
+					
+					for ky in range(j-n,j+n+1):
+
+						img = imagen[kx][ky]
+						krn = matriz[px][py]
+
+						aux = aux + (img*krn) 
+
+						py += 1
+
+					#end for ky
+					px += 1
+					py = 0
+				#end for kx
 
 				aux = aux/escalar
 				aux = int(aux)
 				imagenM[i][j] = aux
-			#end if
+						
 		#end for j
 	#end for i
+
 	return imagenM
 
-
-def seleccionarBordes(imagen,matrizX,matrizY):
+def seleccionarBordes(imagen,matriz,threshold):
 	for i in range(rows):
 		for j in range(columns):
-			if (fabs(matrizX[i,j])+fabs(matrizY[i,j])>10000):
-				imagen[i,j]=0
-			else:
+			if (matriz[i,j]>threshold):
 				imagen[i,j]=1
+			else:
+				imagen[i,j]=0
 	return imagen
 
 def filtroMediana(imagen, n = 1):
@@ -231,6 +241,15 @@ def filtroMediana(imagen, n = 1):
 						list.append(imagen[x,y])
 
 	return imagen
+
+def calcularGradiente(matrizX,matrizY):
+	imagenM = matrizX
+
+	for i in range(rows):
+		for j in range(columns):
+			imagenM[i,j] = fabs(matrizX[i,j])+fabs(matrizY[i,j])
+
+	return imagenM
 
 def ordenar(lista):
 	n = len(lista)
