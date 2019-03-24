@@ -5,7 +5,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import PIL
 from PIL import ImageTk, Image
+from skimage import filters
 from math import fabs
+from math import floor
 from tkinter import *
 from tkinter import filedialog
 from tkinter.filedialog import askopenfilename
@@ -15,10 +17,8 @@ filename = ""
 intensity = [0]*65536
 rows = 0
 columns = 0
-matrizSobelX=[[-1,0,1],[-2,0,2],[-1,0,1]] #Matriz gradiente en X
-matrizSobelY=[[-1,-2,-1],[0,0,0],[1,2,1]] #Matriz gradiente en Y
 
-#----------------------------------Funciones---------------------------------
+#----------------------------------Funciones Logica---------------------------------
 
 #--Selecciona el archivo y habilita botones de funciones
 def selectFile():
@@ -35,152 +35,47 @@ def selectFile():
 		histogram.config(state="normal")
 		gaussian.config(state="normal")
 		raleygh.config(state="normal")
-		fGaussE.config(state="normal")
+		#fGaussE.config(state="normal")
 		mediana.config(state="normal")
 		bordes.config(state="normal")
+		kmeans.config(state="normal")
 
 #--Abrir la imagen
 def openImage():
-	plt.imshow(ds.pixel_array) #,cmap=plt.cm.gray
+	plt.imshow(ds.pixel_array, cmap=plt.cm.gray) #,cmap=plt.cm.gray
 	plt.show()
 
-#--Hacer e imprimir el histograma
-def histogram():
+#-----------------------Hacer e imprimir el histograma--------------------------------
 
-	global intensity
-	intensity=[0]*65536
-	for i in range (rows):
-		for j in range (columns):
-			intensity[ds.pixel_array[i,j]]=intensity[ds.pixel_array[i,j]]+1
+def histograma(image):
+	img = np.asarray(image)
 
-	intensity = np.asarray(intensity)
-	plt.plot(intensity)
+	tam=len(img)
+	tam2=np.amax(img)+1
+
+	histo = [0]*(np.amax(img)+1)
+
+	for i in range(len(image)):
+		for j in range(len(image)):
+			histo[img[i,j]] = histo[img[i,j]]+1
+
+	histo = np.asarray(histo)
+
+	return histo
+
+def makeHistogram():
+
+	hist = histograma(ds.pixel_array)
+
+	plt.plot(hist)
 	plt.show()
 
-def filtroGaussiano():
-	matriz = getGaussianFilter()[0]
-	escalar = getGaussianFilter()[1]
+#---------------------------------Termina el histograma-------------------------------
 
-	copia = ds.pixel_array.copy() 
-	copia = convolucion(copia,matriz,escalar)
+#---------------------------------------FILTROS---------------------------------------
 
-	plt.imshow(copia)
-	plt.show()
-
-def filtroRayleigh():
-	matriz = getRayleighFilter(2)[0]
-	escalar = getRayleighFilter(2)[1]
-
-	copia = ds.pixel_array.copy() 
-	copia = convolucion(copia,matriz,escalar)
-
-	plt.imshow(copia)
-	plt.show()
-	
-def filtroGaussianoEntero():
-	matriz = getIntegerValuedGaussianFilter()[0]
-	escalar = getIntegerValuedGaussianFilter()[1]
-
-	copia = ds.pixel_array.copy() 
-	copia = convolucion(copia,matriz,escalar)
-
-	plt.imshow(copia)
-	plt.show()
-
-def hallarBordes():
-	copia = ds.pixel_array.copy()
-
-	gradienteX = convolucion(copia,matrizSobelX,1)
-	gradienteY = convolucion(copia,matrizSobelY,1)
-
-	gradiente = calcularGradiente(gradienteX,gradienteY)
-
-	umbral = 4000#Esto deberia funcionar con otsu
-
-	copia = seleccionarBordes(copia,gradiente,umbral)
-
-	plt.imshow(copia)
-	plt.show()
-
-def aplicarMediana():
-	copia = ds.pixel_array.copy()
-
-	copia = filtroMediana(copia)
-
-	plt.imshow(copia)
-	plt.show()
-
-
-#------------------------------Funciones adicionales----------------------------------
-
-#--Obtener kernel gaussiano
-def getGaussianFilter(neighbours=1, sigma=1):
-	N = neighbours*2+1
-	X = Y = np.zeros((N, N))
-
-	Y[:] = np.arange(N,dtype=np.float32)-neighbours
-	X = np.transpose(Y) 
-	
-	gaussianFilter = np.zeros((N, N))
-
-	leftSide = (1 / (np.pi * 2 * np.power(sigma,2)))
-
-	aux = -(np.power(X, 2) + np.power(Y, 2)) / (2 * np.power(sigma, 2))
-	rightSide = np.exp(aux)
-
-	gaussianFilter = leftSide*rightSide
-	factorValue = 1/np.sum(gaussianFilter)
-
-	return gaussianFilter,factorValue
-
-#--Obtener kernel rayleigh
-def getRayleighFilter(neighbours=1, sigma=1):
-	N =  neighbours * 2 + 1
-	X = Y = np.zeros((N, N))
-
-	Y[:] = np.arange(N, dtype=np.float32)
-	X = np.transpose(Y)
-
-	rayleighFilter = np.zeros((N, N))
-	leftSide = np.divide(X*Y, np.power(sigma,4))
-
-	aux = -(np.power(X, 2) + np.power(Y, 2)) / (2 * np.power(sigma, 2))
-	rightSide = np.exp(aux)
-
-	rayleighFilter = leftSide*rightSide
-	factorValue = 1/np.sum(rayleighFilter)
-
-	return rayleighFilter,factorValue
-
-#--Obtener kernel gaussiano entero
-def getIntegerValuedGaussianFilter(neighbours = 1, sigma = 1):
-	N = neighbours*2 + 1
-
-	pascalRow = np.asarray(getKthPascalRow(N - 1), dtype=np.int32)
-	pascalRow = np.expand_dims(pascalRow,1)
-
-	extendedPascal = np.resize(pascalRow,(pascalRow.shape[0],pascalRow.shape[0]))
-
-	result = pascalRow * extendedPascal
-	scalarFactor = np.sum(result)
-
-	return result,scalarFactor
-
-#--Función para hallar el kernel gaussiano de enteros
-def getKthPascalRow(rowNumber):
-	if rowNumber == 0:
-		return [1, ]
-
-	lastRow = [1, ]
-	for R in range(1, rowNumber+1):
-		row = []
-		row.append(1)
-		for C in range(R - 1):
-			row.append(lastRow[C] + lastRow[C+1])
-		row.append(1)
-        
-		lastRow = row
-	return lastRow
+#------FUNCION DE CONVOLUCION----
+# RECIBE: imagen principal,kernel,escalar
 
 def convolucion(imagen,matriz,escalar):
 	imagenM = imagen
@@ -220,36 +115,75 @@ def convolucion(imagen,matriz,escalar):
 
 	return imagenM
 
-def seleccionarBordes(imagen,matriz,threshold):
-	for i in range(rows):
-		for j in range(columns):
-			if (matriz[i,j]>threshold):
-				imagen[i,j]=1
-			else:
-				imagen[i,j]=0
-	return imagen
 
-def filtroMediana(imagen, n = 1):
-	for i in range(rows-1):
-		for j in range(columns-1):
-			if i<n or i>((rows-1)-n) or j<n or j>((columns-1)-n):
-				imagen[i][j]=0
-			else:
-				list=[]
-				for x in range(int(i-n),int(i+n)):
-					for y in range(int(j-n),int(j+n)):
-						list.append(imagen[x,y])
+#----Gaussiano
 
-	return imagen
+#--Obtener kernel gaussiano
+def getGaussianFilter(neighbours=1, sigma=1):
+	N = neighbours*2+1
+	X = Y = np.zeros((N, N))
 
-def calcularGradiente(matrizX,matrizY):
-	imagenM = matrizX
+	Y[:] = np.arange(N,dtype=np.float32)-neighbours
+	X = np.transpose(Y) 
+	
+	gaussianFilter = np.zeros((N, N))
 
-	for i in range(rows):
-		for j in range(columns):
-			imagenM[i,j] = fabs(matrizX[i,j])+fabs(matrizY[i,j])
+	leftSide = (1 / (np.pi * 2 * np.power(sigma,2)))
 
-	return imagenM
+	aux = -(np.power(X, 2) + np.power(Y, 2)) / (2 * np.power(sigma, 2))
+	rightSide = np.exp(aux)
+
+	gaussianFilter = leftSide*rightSide
+	factorValue = 1/np.sum(gaussianFilter)
+
+	return gaussianFilter,factorValue
+
+def filtroGaussiano():
+	matriz = getGaussianFilter(2)[0]
+	escalar = getGaussianFilter(2)[1]
+
+	copia = ds.pixel_array.copy() 
+	copia = convolucion(copia,matriz,escalar)
+
+	plt.imshow(copia, cmap=plt.cm.gray)
+	plt.show()
+
+#----Termina Gaussiano
+
+#----Rayleigh
+
+#--Obtener kernel rayleigh
+def getRayleighFilter(neighbours=1, sigma=1):
+	N =  neighbours * 2 + 1
+	X = Y = np.zeros((N, N))
+
+	Y[:] = np.arange(N, dtype=np.float32)
+	X = np.transpose(Y)
+
+	rayleighFilter = np.zeros((N, N))
+	leftSide = np.divide(X*Y, np.power(sigma,4))
+
+	aux = -(np.power(X, 2) + np.power(Y, 2)) / (2 * np.power(sigma, 2))
+	rightSide = np.exp(aux)
+
+	rayleighFilter = leftSide*rightSide
+	factorValue = 1/np.sum(rayleighFilter)
+
+	return rayleighFilter,factorValue
+
+def filtroRayleigh():
+	matriz = getRayleighFilter(2)[0]
+	escalar = getRayleighFilter(2)[1]
+
+	copia = ds.pixel_array.copy() 
+	copia = convolucion(copia,matriz,escalar)
+
+	plt.imshow(copia, cmap=plt.cm.gray)
+	plt.show()
+
+#----Termina Rayleigh
+
+#----Mediana
 
 def ordenar(lista):
 	n = len(lista)
@@ -262,22 +196,201 @@ def ordenar(lista):
 				lista[j+1] = aux
 	return lista
 
-def otsu():
-	umbral=0
-	total = rows*columns
-	sum = 0
-	for i in range (0,65536,1):
-		sum = sum + i*intensity[i]
+def filtroMediana(imagen, n = 1):
+	for i in range(rows):
+		for j in range(columns):
+			if i<n or i>((rows-1)-n) or j<n or j>((columns-1)-n):
+				imagen[i][j]=0
+			else:
+				lista =[]*9
+				mid = 4
 
-	sumB = 0
+				for x in range(i-n,i+n+1):
+					for y in range(j-n,j+n+1):
+						lista.append(imagen[x][y])
+				lista = ordenar(lista)
+
+				imagen[i][j] = lista[4]
+					
+
+
+	return imagen
+
+def aplicarMediana():
+	copia = ds.pixel_array.copy()
+
+	copia = filtroMediana(copia)
+
+	plt.imshow(copia, cmap=plt.cm.gray)
+	plt.show()
+#----Termina Mediana
+
+#---------------------------------Terminan los filtros-------------------------------
+
+#-----------------------------------------Sobel--------------------------------------
+
+
+def calcularGradiente(matrizX,matrizY):
+	imagenM = ds.pixel_array.copy()
+
+	print("en la gradiente",matrizX[350][350])
+	print("en la gradiente",matrizY[350][350])
+
+	for i in range(len(imagenM)):
+		for j in range(len(imagenM)):
+			'''
+			print(matrizX[i][j])
+			print(matrizY[i][j])
+			print("absoluto de X",fabs(matrizX[i][j]))
+			print("absoluto de Y",fabs(matrizY[i][j]))
+			'''
+			imagenM[i][j] = fabs(matrizX[i][j])+fabs(matrizY[i][j])
+
+	return imagenM
+
+def hallarBordes():
+	matrizSobelX=[[-1,0,1],[-2,0,2],[-1,0,1]] #Matriz gradiente en X
+	matrizSobelY=[[-1,-2,-1],[0,0,0],[1,2,1]] #Matriz gradiente en Y
+
+	copia = ds.pixel_array.copy()
+
+	copia = filtroMediana(copia)
+
+	plt.imshow(copia)
+	plt.show()
+	
+	gradienteX = convolucion(copia,matrizSobelX,1)
+	print(gradienteX[350][350])
+
+	plt.imshow(gradienteX)
+	plt.show()
+
+	gradienteY = convolucion(copia,matrizSobelY,1)
+	print(gradienteY[350][350])
+
+	gradiente = calcularGradiente(gradienteX,gradienteY)
+	#print(gradiente[350][350])
+	'''
+	umbral = otsu(gradiente)#Esto deberia funcionar con otsu
+	umbral = fabs(umbral)
+	print(umbral)
+	copia = seleccionarBordes(copia,gradiente,umbral)
+	'''
+	plt.imshow(gradiente)
+	plt.show()
+#------------------------------------Terminar Sobel----------------------------------
+
+#----------------------------------------OTSU----------------------------------------
+
+#------------------------------------Terminar OTSU-----------------------------------
+
+#---------------------------------------K-MEANS--------------------------------------
+
+def kmedios():
+	copia = ds.pixel_array.copy()
+	
+	plt.imshow(copia)
+	plt.show()
+#-----------------------------------Terminar k-means---------------------------------
+
+
+
+
+
+
+
+
+
+
+	
+def filtroGaussianoEntero():
+	matriz = getIntegerValuedGaussianFilter()[0]
+	escalar = getIntegerValuedGaussianFilter()[1]
+
+	copia = ds.pixel_array.copy() 
+	copia = convolucion(copia,matriz,escalar)
+
+	plt.imshow(copia, cmap=plt.cm.gray)
+	plt.show()
+
+
+
+
+
+
+
+#------------------------------Funciones adicionales----------------------------------
+
+
+
+
+#--Obtener kernel gaussiano entero
+def getIntegerValuedGaussianFilter(neighbours = 1, sigma = 1):
+	N = neighbours*2 + 1
+
+	pascalRow = np.asarray(getKthPascalRow(N - 1), dtype=np.int32)
+	pascalRow = np.expand_dims(pascalRow,1)
+
+	extendedPascal = np.resize(pascalRow,(pascalRow.shape[0],pascalRow.shape[0]))
+
+	result = pascalRow * extendedPascal
+	scalarFactor = np.sum(result)
+
+	return result,scalarFactor
+
+#--Función para hallar el kernel gaussiano de enteros
+def getKthPascalRow(rowNumber):
+	if rowNumber == 0:
+		return [1, ]
+
+	lastRow = [1, ]
+	for R in range(1, rowNumber+1):
+		row = []
+		row.append(1)
+		for C in range(R - 1):
+			row.append(lastRow[C] + lastRow[C+1])
+		row.append(1)
+        
+		lastRow = row
+	return lastRow
+
+
+
+def seleccionarBordes(imagen,matriz,threshold):
+	for i in range(rows):
+		for j in range(columns):
+			if (matriz[i,j]>threshold):
+				imagen[i,j]=1
+			else:
+				imagen[i,j]=0
+	return imagen
+
+
+
+
+
+
+def otsu(hist):
+	sum = 0.0
+	tam = len(hist)
+
+	for i in range (tam) :
+		sum += i*hist[i]
+
+	sumB = 0.0
 	wb = 0
 	wf = 0
 
-	varmax = 0
+	varmax = 0.0
 	umbral = 0
+	total = rows*columns
+	varBetween=0.0
+	mb=0
+	mf=0 
 
-	for i in range (50,14000,1):
-		wb = wb + intensity[i]
+	for i in range (tam):
+		wb += hist[i]
+
 		if (wb==0):
 			continue
 
@@ -285,7 +398,8 @@ def otsu():
 		if(wf==0):
 			break
 
-		sumB = sumB + (i*intensity[i])
+		sumB += i*hist[i]
+
 		mb = sumB/wb
 		mf = (sum - sumB)/wf
 
@@ -295,40 +409,70 @@ def otsu():
 			varmax = varBetween
 			umbral = i
 	#end for
+	print(umbral)
 	return umbral
+
+#def clustering(k):
+
+
+
 
 
 #------------------------------------GUI-----------------------------------
-
+#--Definir ventana
 ventanap = Tk()
 ventanap.title("DICOM Image Processing")
-ventanap.geometry("450x250")
+ventanap.geometry("600x400")
 
 myFrame = Frame(ventanap)
 
-seleccionador = Button(myFrame,text="Seleccionar imagen", command=selectFile)
-seleccionador.grid(row=1,column=1)
+#--Definir botones
+msg = StringVar()
+inst = Label( myFrame, textvariable=msg)
+inst.grid(row=1,column = 1,columnspan=2)
+msg.set("Primero seleccione una imagen")
 
-look = Button(myFrame, text = "Mostrar imagen", command=openImage, state = DISABLED)
-look.grid(row=2,column=1)
+seleccionador = Button(myFrame,text="Seleccionar imagen", width=38, command=selectFile)
+seleccionador.grid(row=2,column=1,columnspan=2)
 
-histogram = Button(myFrame,text="Hacer histograma", command=histogram, state = DISABLED)
-histogram.grid(row=3,column=1)
+msg1 = StringVar()
+basico = Label( myFrame, textvariable=msg1)
+basico.grid(row=3,column = 1)
+msg1.set("Funciones basicas")
 
-gaussian = Button(myFrame,text="Filtro Gaussiano", command=filtroGaussiano, state = DISABLED)
-gaussian.grid(row=4,column=1)
+look = Button(myFrame, text = "Mostrar imagen", state = DISABLED, width=18, command=openImage) #
+look.grid(row=4,column=1)
 
-raleygh = Button(myFrame,text="Filtro Raleygh", command=filtroRayleigh, state = DISABLED)
-raleygh.grid(row=5,column=1)
+histogram = Button(myFrame,text="Hacer histograma", state = DISABLED, width=18, command=makeHistogram)#
+histogram.grid(row=4,column=2)
 
-fGaussE = Button(myFrame,text="Filtro Gaussiano entero", command=filtroGaussianoEntero, state = DISABLED)
-fGaussE.grid(row=6,column=1)
+msg2 = StringVar()
+basico = Label( myFrame, textvariable=msg2)
+basico.grid(row=5,column = 1)
+msg2.set("Preprocesamiento")
 
-mediana = Button(myFrame,text="Filtro mediana", command=aplicarMediana, state = DISABLED)
-mediana.grid(row=7,column=1)
+gaussian = Button(myFrame,text="Filtro Gaussiano", state = DISABLED, width=18, command=filtroGaussiano)#
+gaussian.grid(row=6,column=1)
 
-bordes = Button(myFrame,text="Bordes(Sobel)", command=hallarBordes, state = DISABLED)
+raleygh = Button(myFrame,text="Filtro Raleygh", state = DISABLED, width=18, command=filtroRayleigh)#
+raleygh.grid(row=6,column=2)
+
+#fGaussE = Button(myFrame,text="Filtro Gaussiano entero", state = DISABLED, width=18)#, command=filtroGaussianoEntero
+#fGaussE.grid(row=6,column=3)
+
+mediana = Button(myFrame,text="Filtro mediana", state = DISABLED, width=18, command=aplicarMediana)#
+mediana.grid(row=6,column=3)
+
+msg3 = StringVar()
+basico = Label( myFrame, textvariable=msg3)
+basico.grid(row=7,column = 1)
+msg3.set("Bordes")
+
+bordes = Button(myFrame,text="Bordes(Sobel)", state = DISABLED, width=18, command=hallarBordes)#
 bordes.grid(row=8,column=1)
+
+kmeans = Button(myFrame,text="K-means", state = DISABLED, width=18)#, command=kmedios
+kmeans.grid(row=8,column=2)
 
 myFrame.pack()
 
