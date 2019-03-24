@@ -198,20 +198,27 @@ def ordenar(lista):
 	return lista
 
 def filtroMediana(imagen, n = 1):
+	
+	vecinos = n
+	tamKrn = (2*n)+1
+	tamArr = tamKrn**2
+	
+
 	for i in range(rows):
 		for j in range(columns):
 			if i<n or i>((rows-1)-n) or j<n or j>((columns-1)-n):
 				imagen[i][j]=0
 			else:
-				lista =[]*9
-				mid = 4
+				lista =[]*tamArr
 
 				for x in range(i-n,i+n+1):
 					for y in range(j-n,j+n+1):
 						lista.append(imagen[x][y])
 				lista = ordenar(lista)
 
-				imagen[i][j] = lista[4]
+				mid = int((len(lista)-1)/2)
+
+				imagen[i][j] = lista[mid]
 
 	return imagen
 
@@ -332,89 +339,53 @@ def aplyOtsu():
 
 #---------------------------------------K-MEANS--------------------------------------
 
+def definirCentroides(k):
+    contador=0
+
+    centroides= ds.pixel_array.copy()
+
+    cn = []
+
+    for i in range(k):
+        cn.append(int(255/k)*i)
+
+    
+    while(contador<2):
+        arrayCn = []
+        
+        for n in range(k):
+            arrayCn.append([])
+        for i in range(rows):
+            for j in range(columns):
+                distancias=[]
+                for n in range(k):
+                    distancias.append(fabs(cn[n]-ds.pixel_array[i][j]))
+
+                index=distancias.index(np.amin(distancias))
+                arrayCn[index].append(ds.pixel_array[i][j])
+
+                centroides[i][j]=index*int(255/k)
+            #print("row: " + str(i)+" columns: "+str(j))
+
+        iguales=True                
+        for n in range(k):
+            if(cn[n]!=int(np.mean(arrayCn[n]))):
+                cn[n]=int(np.mean(arrayCn[n]))
+                iguales=False
+        
+        if(iguales):
+            contador+=1
+
+    return centroides
+
 def kmedios():
 	copia = ds.pixel_array.copy()
+
+	copia = definirCentroides(2)
 	
 	plt.imshow(copia)
 	plt.show()
 #-----------------------------------Terminar k-means---------------------------------
-
-
-
-
-
-
-
-
-
-
-	
-def filtroGaussianoEntero():
-	matriz = getIntegerValuedGaussianFilter()[0]
-	escalar = getIntegerValuedGaussianFilter()[1]
-
-	copia = ds.pixel_array.copy() 
-	copia = convolucion(copia,matriz,escalar)
-
-	plt.imshow(copia, cmap=plt.cm.gray)
-	plt.show()
-
-
-
-
-
-
-
-#------------------------------Funciones adicionales----------------------------------
-
-
-
-
-#--Obtener kernel gaussiano entero
-def getIntegerValuedGaussianFilter(neighbours = 1, sigma = 1):
-	N = neighbours*2 + 1
-
-	pascalRow = np.asarray(getKthPascalRow(N - 1), dtype=np.int32)
-	pascalRow = np.expand_dims(pascalRow,1)
-
-	extendedPascal = np.resize(pascalRow,(pascalRow.shape[0],pascalRow.shape[0]))
-
-	result = pascalRow * extendedPascal
-	scalarFactor = np.sum(result)
-
-	return result,scalarFactor
-
-#--Función para hallar el kernel gaussiano de enteros
-def getKthPascalRow(rowNumber):
-	if rowNumber == 0:
-		return [1, ]
-
-	lastRow = [1, ]
-	for R in range(1, rowNumber+1):
-		row = []
-		row.append(1)
-		for C in range(R - 1):
-			row.append(lastRow[C] + lastRow[C+1])
-		row.append(1)
-        
-		lastRow = row
-	return lastRow
-
-
-
-
-
-
-
-
-
-
-
-
-#def clustering(k):
-
-
-
 
 
 #------------------------------------GUI-----------------------------------
@@ -439,10 +410,10 @@ basico = Label( myFrame, textvariable=msg1)
 basico.grid(row=3,column = 1)
 msg1.set("Funciones basicas")
 
-look = Button(myFrame, text = "Mostrar imagen", state = DISABLED, width=18, command=openImage) #
+look = Button(myFrame, text = "Mostrar imagen", state = DISABLED, width=18, command=openImage)
 look.grid(row=4,column=1)
 
-histogram = Button(myFrame,text="Hacer histograma", state = DISABLED, width=18, command=makeHistogram)#
+histogram = Button(myFrame,text="Hacer histograma", state = DISABLED, width=18, command=makeHistogram)
 histogram.grid(row=4,column=2)
 
 msg2 = StringVar()
@@ -450,16 +421,13 @@ basico = Label( myFrame, textvariable=msg2)
 basico.grid(row=5,column = 1)
 msg2.set("Preprocesamiento")
 
-gaussian = Button(myFrame,text="Filtro Gaussiano", state = DISABLED, width=18, command=filtroGaussiano)#
+gaussian = Button(myFrame,text="Filtro Gaussiano", state = DISABLED, width=18, command=filtroGaussiano)
 gaussian.grid(row=6,column=1)
 
-raleygh = Button(myFrame,text="Filtro Raleygh", state = DISABLED, width=18, command=filtroRayleigh)#
+raleygh = Button(myFrame,text="Filtro Raleygh", state = DISABLED, width=18, command=filtroRayleigh)
 raleygh.grid(row=6,column=2)
 
-#fGaussE = Button(myFrame,text="Filtro Gaussiano entero", state = DISABLED, width=18)#, command=filtroGaussianoEntero
-#fGaussE.grid(row=6,column=3)
-
-mediana = Button(myFrame,text="Filtro mediana", state = DISABLED, width=18, command=aplicarMediana)#
+mediana = Button(myFrame,text="Filtro mediana", state = DISABLED, width=18, command=aplicarMediana)
 mediana.grid(row=6,column=3)
 
 msg3 = StringVar()
@@ -467,13 +435,13 @@ basico = Label( myFrame, textvariable=msg3)
 basico.grid(row=7,column = 1)
 msg3.set("Bordes")
 
-bordes = Button(myFrame,text="Bordes(Sobel)", state = DISABLED, width=18, command=hallarBordes)#
+bordes = Button(myFrame,text="Bordes(Sobel)", state = DISABLED, width=18, command=hallarBordes)
 bordes.grid(row=8,column=1)
 
-umbralizacion = Button(myFrame,text="Bordes(OTSU)", state = DISABLED, width=18, command=aplyOtsu)#, command=kmedios
+umbralizacion = Button(myFrame,text="Bordes(OTSU)", state = DISABLED, width=18, command=aplyOtsu)
 umbralizacion.grid(row=8,column=2)
 
-kmeans = Button(myFrame,text="K-means", state = DISABLED, width=18)#, command=kmedios
+kmeans = Button(myFrame,text="K-means", state = DISABLED, width=18, command=kmedios)
 kmeans.grid(row=8,column=3)
 
 myFrame.pack()
