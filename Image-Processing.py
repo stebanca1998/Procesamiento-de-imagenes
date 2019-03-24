@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 import PIL
 from PIL import ImageTk, Image
 from skimage import filters
-from math import fabs
-from math import floor
+from math import fabs,sqrt
+from scipy.signal import convolve2d
 from tkinter import *
 from tkinter import filedialog
 from tkinter.filedialog import askopenfilename
@@ -92,7 +92,7 @@ def convolucion(imagen,matriz,escalar):
 				aux=0.0
 				for kx in range(i-n,i+n+1):
 					
-					for ky in range(j-n,j+n+1):
+					for ky in range(j-n,j+n+1): 
 
 						img = imagen[kx][ky]
 						krn = matriz[px][py]
@@ -108,11 +108,11 @@ def convolucion(imagen,matriz,escalar):
 
 				aux = aux/escalar
 				aux = int(aux)
+
 				imagenM[i][j] = aux
 						
 		#end for j
 	#end for i
-
 	return imagenM
 
 
@@ -211,8 +211,6 @@ def filtroMediana(imagen, n = 1):
 				lista = ordenar(lista)
 
 				imagen[i][j] = lista[4]
-					
-
 
 	return imagen
 
@@ -231,53 +229,44 @@ def aplicarMediana():
 
 
 def calcularGradiente(matrizX,matrizY):
-	imagenM = ds.pixel_array.copy()
+	imagenM = matrizX.copy()
 
-	print("en la gradiente",matrizX[350][350])
-	print("en la gradiente",matrizY[350][350])
+	print("en la gradiente",matrizX[155][135])
+	print("en la gradiente",matrizY[155][135])
 
 	for i in range(len(imagenM)):
 		for j in range(len(imagenM)):
-			'''
-			print(matrizX[i][j])
-			print(matrizY[i][j])
-			print("absoluto de X",fabs(matrizX[i][j]))
-			print("absoluto de Y",fabs(matrizY[i][j]))
-			'''
+
 			imagenM[i][j] = fabs(matrizX[i][j])+fabs(matrizY[i][j])
 
+
+	print(imagenM[155][135])
 	return imagenM
 
 def hallarBordes():
 	matrizSobelX=[[-1,0,1],[-2,0,2],[-1,0,1]] #Matriz gradiente en X
-	matrizSobelY=[[-1,-2,-1],[0,0,0],[1,2,1]] #Matriz gradiente en Y
+	matrizSobelX = np.asarray(matrizSobelX)
+	matrizSobelY=[[1,2,1],[0,0,0],[-1,-2,-1]] #Matriz gradiente en Y
+	matrizSobelY = np.asarray(matrizSobelY)
 
 	copia = ds.pixel_array.copy()
 
-	copia = filtroMediana(copia)
+	matriz = getGaussianFilter()[0]
+	escalar = getGaussianFilter()[1]
 
-	plt.imshow(copia)
-	plt.show()
+	copia = convolucion(copia,matriz,escalar)
+	copia2 = copia.copy()
+
+	gradienteX = convolve2d(copia,matrizSobelX,"same","symm")
 	
-	gradienteX = convolucion(copia,matrizSobelX,1)
-	print(gradienteX[350][350])
+	gradienteY = convolve2d(copia2,matrizSobelY,"same","symm")
 
-	plt.imshow(gradienteX)
+	gradiente = np.abs(gradienteX) + np.abs(gradienteY)
+
+	plt.imshow(gradiente, cmap=plt.cm.gray)
 	plt.show()
 
-	gradienteY = convolucion(copia,matrizSobelY,1)
-	print(gradienteY[350][350])
-
-	gradiente = calcularGradiente(gradienteX,gradienteY)
-	#print(gradiente[350][350])
-	'''
-	umbral = otsu(gradiente)#Esto deberia funcionar con otsu
-	umbral = fabs(umbral)
-	print(umbral)
-	copia = seleccionarBordes(copia,gradiente,umbral)
-	'''
-	plt.imshow(gradiente)
-	plt.show()
+	return gradiente
 #------------------------------------Terminar Sobel----------------------------------
 
 #----------------------------------------OTSU----------------------------------------
