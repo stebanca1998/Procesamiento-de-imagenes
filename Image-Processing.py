@@ -38,6 +38,7 @@ def selectFile():
 		#fGaussE.config(state="normal")
 		mediana.config(state="normal")
 		bordes.config(state="normal")
+		umbralizacion.config(state="normal")
 		kmeans.config(state="normal")
 
 #--Abrir la imagen
@@ -227,23 +228,7 @@ def aplicarMediana():
 
 #-----------------------------------------Sobel--------------------------------------
 
-
-def calcularGradiente(matrizX,matrizY):
-	imagenM = matrizX.copy()
-
-	print("en la gradiente",matrizX[155][135])
-	print("en la gradiente",matrizY[155][135])
-
-	for i in range(len(imagenM)):
-		for j in range(len(imagenM)):
-
-			imagenM[i][j] = fabs(matrizX[i][j])+fabs(matrizY[i][j])
-
-
-	print(imagenM[155][135])
-	return imagenM
-
-def hallarBordes():
+def aplicarSobel():
 	matrizSobelX=[[-1,0,1],[-2,0,2],[-1,0,1]] #Matriz gradiente en X
 	matrizSobelX = np.asarray(matrizSobelX)
 	matrizSobelY=[[1,2,1],[0,0,0],[-1,-2,-1]] #Matriz gradiente en Y
@@ -263,13 +248,85 @@ def hallarBordes():
 
 	gradiente = np.abs(gradienteX) + np.abs(gradienteY)
 
-	plt.imshow(gradiente, cmap=plt.cm.gray)
+	return gradiente
+
+def hallarBordes():
+
+	resultado = aplicarSobel()
+
+	plt.imshow(resultado, cmap=plt.cm.gray)
 	plt.show()
 
-	return gradiente
 #------------------------------------Terminar Sobel----------------------------------
 
 #----------------------------------------OTSU----------------------------------------
+
+def otsu(hist):
+	sum = 0.0
+	tam = len(hist)
+
+	for i in range (tam) :
+		sum += i*hist[i]
+
+	sumB = 0.0
+	wb = 0
+	wf = 0
+
+	varmax = 0.0
+	umbral = 0
+	total = rows*columns
+	varBetween=0.0
+	mb=0
+	mf=0 
+
+	for i in range (tam):
+		wb += hist[i]
+
+		if (wb==0):
+			continue
+
+		wf = total - wb
+		if(wf==0):
+			break
+
+		sumB += i*hist[i]
+
+		mb = sumB/wb
+		mf = (sum - sumB)/wf
+
+		varBetween = float(wb)*float(wf)*(mb-mf)*(mb-mf)
+
+		if (varBetween > varmax):
+			varmax = varBetween
+			umbral = i
+	#end for
+	print(umbral)
+	return umbral
+
+def seleccionarBordes(imagen,threshold):
+	imagenM = imagen
+	tam = len(imagen)
+
+	for i in range(tam):
+		for j in range(tam):
+			if (imagen[i][j]>threshold):
+				imagenM[i][j]=1
+			else:
+				imagenM[i][j]=0
+	return imagen
+
+def aplyOtsu():
+	copia = aplicarSobel()
+	inte = histograma(copia)
+
+	umbral = otsu(inte)
+
+	deliver = seleccionarBordes(copia,umbral)
+
+	plt.imshow(deliver, cmap=plt.cm.gray)
+	plt.show()
+
+
 
 #------------------------------------Terminar OTSU-----------------------------------
 
@@ -345,61 +402,14 @@ def getKthPascalRow(rowNumber):
 
 
 
-def seleccionarBordes(imagen,matriz,threshold):
-	for i in range(rows):
-		for j in range(columns):
-			if (matriz[i,j]>threshold):
-				imagen[i,j]=1
-			else:
-				imagen[i,j]=0
-	return imagen
 
 
 
 
 
 
-def otsu(hist):
-	sum = 0.0
-	tam = len(hist)
 
-	for i in range (tam) :
-		sum += i*hist[i]
 
-	sumB = 0.0
-	wb = 0
-	wf = 0
-
-	varmax = 0.0
-	umbral = 0
-	total = rows*columns
-	varBetween=0.0
-	mb=0
-	mf=0 
-
-	for i in range (tam):
-		wb += hist[i]
-
-		if (wb==0):
-			continue
-
-		wf = total - wb
-		if(wf==0):
-			break
-
-		sumB += i*hist[i]
-
-		mb = sumB/wb
-		mf = (sum - sumB)/wf
-
-		varBetween = float(wb)*float(wf)*(mb-mf)*(mb-mf)
-
-		if (varBetween > varmax):
-			varmax = varBetween
-			umbral = i
-	#end for
-	print(umbral)
-	return umbral
 
 #def clustering(k):
 
@@ -460,8 +470,11 @@ msg3.set("Bordes")
 bordes = Button(myFrame,text="Bordes(Sobel)", state = DISABLED, width=18, command=hallarBordes)#
 bordes.grid(row=8,column=1)
 
+umbralizacion = Button(myFrame,text="Bordes(OTSU)", state = DISABLED, width=18, command=aplyOtsu)#, command=kmedios
+umbralizacion.grid(row=8,column=2)
+
 kmeans = Button(myFrame,text="K-means", state = DISABLED, width=18)#, command=kmedios
-kmeans.grid(row=8,column=2)
+kmeans.grid(row=8,column=3)
 
 myFrame.pack()
 
