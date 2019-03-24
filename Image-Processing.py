@@ -9,6 +9,7 @@ from skimage import filters
 from math import fabs,sqrt
 from scipy.signal import convolve2d
 from tkinter import *
+from tkinter import ttk
 from tkinter import filedialog
 from tkinter.filedialog import askopenfilename
 
@@ -140,8 +141,13 @@ def getGaussianFilter(neighbours=1, sigma=1):
 	return gaussianFilter,factorValue
 
 def filtroGaussiano():
-	matriz = getGaussianFilter(2)[0]
-	escalar = getGaussianFilter(2)[1]
+	
+	k = tamKernel.get()
+	tamano=int(k[:k.index("x")])
+	tamano = int((tamano-1)/2)
+
+	matriz = getGaussianFilter(tamano)[0]
+	escalar = getGaussianFilter(tamano)[1]
 
 	copia = ds.pixel_array.copy() 
 	copia = convolucion(copia,matriz,escalar)
@@ -173,8 +179,13 @@ def getRayleighFilter(neighbours=1, sigma=1):
 	return rayleighFilter,factorValue
 
 def filtroRayleigh():
-	matriz = getRayleighFilter(2)[0]
-	escalar = getRayleighFilter(2)[1]
+
+	k = tamKernel.get()
+	tamano=int(k[:k.index("x")])
+	tamano = int((tamano-1)/2)
+
+	matriz = getRayleighFilter(tamano)[0]
+	escalar = getRayleighFilter(tamano)[1]
 
 	copia = ds.pixel_array.copy() 
 	copia = convolucion(copia,matriz,escalar)
@@ -225,7 +236,11 @@ def filtroMediana(imagen, n = 1):
 def aplicarMediana():
 	copia = ds.pixel_array.copy()
 
-	copia = filtroMediana(copia)
+	k = tamKernel.get()
+	tamano=int(k[:k.index("x")])
+	tamano = int((tamano-1)/2)
+
+	copia = filtroMediana(copia,tamano)
 
 	plt.imshow(copia, cmap=plt.cm.gray)
 	plt.show()
@@ -381,7 +396,10 @@ def definirCentroides(k):
 def kmedios():
 	copia = ds.pixel_array.copy()
 
-	copia = definirCentroides(2)
+	centroides = numCents.get()
+	centroides = int(centroides)
+
+	copia = definirCentroides(centroides)
 	
 	plt.imshow(copia)
 	plt.show()
@@ -417,32 +435,60 @@ histogram = Button(myFrame,text="Hacer histograma", state = DISABLED, width=18, 
 histogram.grid(row=4,column=2)
 
 msg2 = StringVar()
-basico = Label( myFrame, textvariable=msg2)
-basico.grid(row=5,column = 1)
+proce = Label( myFrame, textvariable=msg2)
+proce.grid(row=5,column = 1)
 msg2.set("Preprocesamiento")
 
+msg3 = StringVar()
+krntam = Label( myFrame, textvariable=msg3)
+krntam.grid(row=6,column = 1)
+msg3.set("Tamaño del kernel: ")
+
+tamKernel = ttk.Combobox(myFrame, values=("3x3", "5x5", "7x7", "9x9"),state="readonly")
+tamKernel.set("3x3")
+tamKernel.grid(row=6,column=2)
+
+msg4 = StringVar()
+fil = Label( myFrame, textvariable=msg4)
+fil.grid(row=7,column = 1)
+msg4.set("Filtros")
+
 gaussian = Button(myFrame,text="Filtro Gaussiano", state = DISABLED, width=18, command=filtroGaussiano)
-gaussian.grid(row=6,column=1)
+gaussian.grid(row=8,column=1)
 
 raleygh = Button(myFrame,text="Filtro Raleygh", state = DISABLED, width=18, command=filtroRayleigh)
-raleygh.grid(row=6,column=2)
+raleygh.grid(row=8,column=2)
 
 mediana = Button(myFrame,text="Filtro mediana", state = DISABLED, width=18, command=aplicarMediana)
-mediana.grid(row=6,column=3)
+mediana.grid(row=8,column=3)
 
-msg3 = StringVar()
-basico = Label( myFrame, textvariable=msg3)
-basico.grid(row=7,column = 1)
-msg3.set("Bordes")
+msg5 = StringVar()
+bor = Label( myFrame, textvariable=msg5)
+bor.grid(row=9,column = 1)
+msg5.set("Bordes")
 
 bordes = Button(myFrame,text="Bordes(Sobel)", state = DISABLED, width=18, command=hallarBordes)
-bordes.grid(row=8,column=1)
+bordes.grid(row=10,column=1)
 
 umbralizacion = Button(myFrame,text="Bordes(OTSU)", state = DISABLED, width=18, command=aplyOtsu)
-umbralizacion.grid(row=8,column=2)
+umbralizacion.grid(row=10,column=2)
+
+msg6 = StringVar()
+bor = Label( myFrame, textvariable=msg6)
+bor.grid(row=11,column = 1)
+msg6.set("Segmentación")
+
+msg7 = StringVar()
+bor = Label( myFrame, textvariable=msg7)
+bor.grid(row=12,column = 1)
+msg7.set("Número de centroides: ")
+
+numCents = ttk.Combobox(myFrame, values=("2", "3", "4", "5"),state="readonly")
+numCents.set("2")
+numCents.grid(row=12,column=2)
 
 kmeans = Button(myFrame,text="K-means", state = DISABLED, width=18, command=kmedios)
-kmeans.grid(row=8,column=3)
+kmeans.grid(row=12,column=3)
 
 myFrame.pack()
 
