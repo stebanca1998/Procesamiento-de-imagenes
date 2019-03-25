@@ -30,6 +30,11 @@ def selectFile():
 	rows = int(ds.Rows)
 	columns = int(ds.Columns)
 
+	
+	msg11.set(str(ds.PatientID))
+	msg13.set(str(ds.Rows))
+	msg15.set(str(ds.Columns))
+	msg17.set(str(ds.PixelSpacing))
 
 	if filename!="":
 		look.config(state="normal")
@@ -44,6 +49,7 @@ def selectFile():
 
 #--Abrir la imagen
 def openImage():
+
 	plt.imshow(ds.pixel_array, cmap=plt.cm.gray) #,cmap=plt.cm.gray
 	plt.show()
 
@@ -410,7 +416,7 @@ def kmedios():
 #--Definir ventana
 ventanap = Tk()
 ventanap.title("DICOM Image Processing")
-ventanap.geometry("600x400")
+ventanap.geometry("700x500")
 
 myFrame = Frame(ventanap)
 
@@ -489,6 +495,52 @@ numCents.grid(row=12,column=2)
 
 kmeans = Button(myFrame,text="K-means", state = DISABLED, width=18, command=kmedios)
 kmeans.grid(row=12,column=3)
+
+msg8 = StringVar()
+sep = Label( myFrame, textvariable=msg8)
+sep.grid(row=13,column = 1, columnspan=3)
+msg8.set("------------------------------------------------------------------------------------------")
+
+msg9 = StringVar()
+bor = Label( myFrame, textvariable=msg9)
+bor.grid(row=14,column = 2)
+msg9.set("INFORMACIÓN")
+
+msg10 = StringVar()
+idp = Label( myFrame, textvariable=msg10)
+idp.grid(row=15,column = 1)
+msg10.set("ID Paciente: ")
+
+msg11 = StringVar()
+idp2 = Label( myFrame, textvariable=msg11)
+idp2.grid(row=15,column = 3)
+
+msg12 = StringVar()
+fila = Label( myFrame, textvariable=msg12)
+fila.grid(row=16,column = 1)
+msg12.set("Filas: ")
+
+msg13 = StringVar()
+fila2 = Label( myFrame, textvariable=msg13)
+fila2.grid(row=16,column = 3)
+
+msg14 = StringVar()
+columna = Label( myFrame, textvariable=msg14)
+columna.grid(row=17,column = 1)
+msg14.set("Columnas: ")
+
+msg15 = StringVar()
+columna2 = Label( myFrame, textvariable=msg15)
+columna2.grid(row=17,column = 3)
+
+msg16 = StringVar()
+ps = Label( myFrame, textvariable=msg16)
+ps.grid(row=18,column = 1)
+msg16.set("Pixel spacing: ")
+
+msg17 = StringVar()
+ps2 = Label( myFrame, textvariable=msg17)
+ps2.grid(row=18,column = 3)
 
 myFrame.pack()
 
