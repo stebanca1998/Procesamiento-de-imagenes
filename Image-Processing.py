@@ -1,4 +1,4 @@
-import pydicom
+mport pydicom
 import os
 import tempfile
 import numpy as np
@@ -30,7 +30,6 @@ def selectFile():
 	rows = int(ds.Rows)
 	columns = int(ds.Columns)
 
-	
 	msg11.set(str(ds.PatientID))
 	msg13.set(str(ds.Rows))
 	msg15.set(str(ds.Columns))
@@ -360,10 +359,10 @@ def aplyOtsu():
 
 #---------------------------------------K-MEANS--------------------------------------
 
-def definirCentroides(k):
+def definirCentroides(k,imagen):
     contador=0
 
-    centroides= ds.pixel_array.copy()
+    centroides= imagen.copy()
 
     cn = []
 
@@ -380,10 +379,10 @@ def definirCentroides(k):
             for j in range(columns):
                 distancias=[]
                 for n in range(k):
-                    distancias.append(fabs(cn[n]-ds.pixel_array[i][j]))
+                    distancias.append(fabs(cn[n]-imagen[i][j]))
 
                 index=distancias.index(np.amin(distancias))
-                arrayCn[index].append(ds.pixel_array[i][j])
+                arrayCn[index].append(imagen[i][j])
 
                 centroides[i][j]=index*int(255/k)
             #print("row: " + str(i)+" columns: "+str(j))
@@ -396,16 +395,22 @@ def definirCentroides(k):
         
         if(iguales):
             contador+=1
+            print(arrayCn)
 
     return centroides
 
 def kmedios():
 	copia = ds.pixel_array.copy()
 
+	matriz = getGaussianFilter()[0]
+	escalar = getGaussianFilter()[1]
+
+	copia = convolucion(copia,matriz,escalar)
+
 	centroides = numCents.get()
 	centroides = int(centroides)
 
-	copia = definirCentroides(centroides)
+	copia = definirCentroides(centroides,copia)
 	
 	plt.imshow(copia)
 	plt.show()
@@ -489,7 +494,7 @@ bor = Label( myFrame, textvariable=msg7)
 bor.grid(row=12,column = 1)
 msg7.set("Número de centroides: ")
 
-numCents = ttk.Combobox(myFrame, values=("2", "3", "4", "5"),state="readonly")
+numCents = ttk.Combobox(myFrame, values=("2", "3", "4", "5","6","7"),state="readonly")
 numCents.set("2")
 numCents.grid(row=12,column=2)
 
