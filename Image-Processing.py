@@ -395,7 +395,6 @@ def definirCentroides(k,imagen):
         
         if(iguales):
             contador+=1
-            print(arrayCn)
 
     return centroides
 
